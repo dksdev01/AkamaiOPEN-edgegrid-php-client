@@ -16,6 +16,7 @@ namespace Akamai\Open\EdgeGrid;
 use Akamai\Open\EdgeGrid\Handler\Authentication as AuthenticationHandler;
 use Akamai\Open\EdgeGrid\Handler\Debug as DebugHandler;
 use Akamai\Open\EdgeGrid\Handler\Verbose as VerboseHandler;
+use Psr\Log\LoggerAwareTrait;
 
 /**
  * Akamai {OPEN} EdgeGrid Client for PHP
@@ -33,6 +34,8 @@ use Akamai\Open\EdgeGrid\Handler\Verbose as VerboseHandler;
  */
 class Client extends \GuzzleHttp\Client implements \Psr\Log\LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     public const VERSION = '2.0.0';
 
     /**
@@ -93,10 +96,6 @@ class Client extends \GuzzleHttp\Client implements \Psr\Log\LoggerAwareInterface
      */
     protected $debugOverride = false;
 
-    /**
-     * @var callable Logging Handler
-     */
-    protected $logger;
 
     /**
      * \GuzzleHttp\Client-compatible constructor
@@ -261,34 +260,6 @@ class Client extends \GuzzleHttp\Client implements \Psr\Log\LoggerAwareInterface
     }
 
     /**
-     * Set a PSR-3 compatible logger (or use monolog by default)
-     *
-     * @param \Psr\Log\LoggerInterface $logger
-     * @param string $messageFormat Message format
-     * @return $this
-     */
-    public function setLogger(
-        \Psr\Log\LoggerInterface $logger = null,
-        $messageFormat = \GuzzleHttp\MessageFormatter::CLF
-    ) {
-        if ($logger === null) {
-            $handler = new \Monolog\Handler\ErrorLogHandler(\Monolog\Handler\ErrorLogHandler::SAPI);
-            $handler->setFormatter(new \Monolog\Formatter\LineFormatter('%message%'));
-            $logger = new \Monolog\Logger('HTTP Log', [$handler]);
-        }
-
-        $formatter = new \GuzzleHttp\MessageFormatter($messageFormat);
-
-        $handler = \GuzzleHttp\Middleware::log($logger, $formatter);
-        $this->logger = $handler;
-
-        $handlerStack = $this->getConfig('handler');
-        $this->setLogHandler($handlerStack, $handler);
-
-        return $this;
-    }
-
-    /**
      * Add logger using a given filename/format
      *
      * @param string $filename
@@ -300,12 +271,6 @@ class Client extends \GuzzleHttp\Client implements \Psr\Log\LoggerAwareInterface
         if ($this->logger && !($this->logger instanceof \Monolog\Logger)) {
             return false;
         }
-
-        $handler = new \Monolog\Handler\StreamHandler($filename);
-        $handler->setFormatter(new \Monolog\Formatter\LineFormatter('%message%'));
-        $log = new \Monolog\Logger('HTTP Log', [$handler]);
-
-        return $this->setLogger($log, $format);
     }
 
     /**
